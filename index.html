@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI業務自動化 診断レポート作成ツール</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ 入力アプリ ============ -->
+<div id="app" class="no-print">
+
+  <header class="app-head">
+    <div class="head-inner">
+      <div class="brand">
+        <span class="logo">◆</span>
+        <div>
+          <div class="brand-name">AI業務自動化 診断レポート作成ツール</div>
+          <div class="brand-sub">業種を選ぶだけで、報告会でお渡しする診断レポートが完成します</div>
+        </div>
+      </div>
+      <div class="head-actions">
+        <button class="btn ghost sm" id="btnLoad">読込</button>
+        <button class="btn ghost sm" id="btnSave">保存</button>
+        <button class="btn ghost sm danger" id="btnReset">最初から</button>
+      </div>
+    </div>
+    <nav class="stepnav" id="stepnav"></nav>
+  </header>
+
+  <main class="wrap">
+
+    <!-- STEP 1 業種 -->
+    <section class="step" data-step="1">
+      <h2 class="q">Q1. 診断先の事業内容を選んでください</h2>
+      <p class="qsub">
+        選んだ業種の一般的な業務内容・作業時間をもとに、<b>時間のかかっている業務とその削減効果を自動で推計</b>します。<br>
+        入力はこの1問と、次の「従業員数」だけです。
+      </p>
+      <div class="cards" id="industryCards"></div>
+    </section>
+
+    <!-- STEP 2 規模 -->
+    <section class="step" data-step="2">
+      <h2 class="q">Q2. 従業員数はどのくらいですか</h2>
+      <p class="qsub">作業量の規模を推計するために使います。おおよそで構いません。</p>
+      <div class="sizes" id="sizeBtns"></div>
+    </section>
+
+    <!-- STEP 3 削減したい業務 -->
+    <section class="step" data-step="3">
+      <h2 class="q">Q3. 特に「時間の無駄」と感じている業務はどれですか</h2>
+      <p class="qsub" id="wasteLead"></p>
+      <p class="qsub">
+        当てはまるものをクリックしてください（複数選択できます）。
+        選んだ業務は<b>優先的に着手する業務</b>として、報告書の上位と実演デモに反映されます。
+        <b>選ばなくても報告書は作成できます。</b>
+      </p>
+      <div class="wastebar">
+        <button class="btn ghost sm" id="btnWasteClear">選択をすべて解除</button>
+        <span class="bulkinfo" id="wasteSummary"></span>
+      </div>
+      <div class="wastegrid" id="wasteGrid"></div>
+      <p class="qsub mt24">
+        ここに出ていない業務は、次の画面の「内容を調整する」から追加できます。
+      </p>
+    </section>
+
+    <!-- STEP 4 報告書 -->
+    <section class="step" data-step="4">
+      <h2 class="q">Q4. 診断レポートが完成しました</h2>
+      <p class="qsub" id="autoSummary"></p>
+
+      <div class="outbar">
+        <button class="btn" id="btnPrint">🖨 印刷 / PDFで保存</button>
+        <button class="btn ghost" id="btnDownload">⬇ HTMLで保存（そのまま配布できます）</button>
+        <button class="btn ghost" id="btnSave2">💾 入力内容を保存</button>
+      </div>
+
+      <!-- 微調整パネル -->
+      <div class="tune">
+        <button class="tune-toggle" id="tuneToggle">
+          <span class="tt-ic">⚙</span>
+          <span>ヒアリング結果に合わせて内容を調整する</span>
+          <span class="tt-caret">▼</span>
+        </button>
+        <div class="tune-body" id="tuneBody" hidden>
+          <div class="tabs" id="tuneTabs">
+            <button data-tab="task" class="on">対象業務と時間</button>
+            <button data-tab="issue">経営課題</button>
+            <button data-tab="calc">効果試算の前提</button>
+            <button data-tab="demo">実演する業務</button>
+          </div>
+
+          <div class="tabpane on" data-pane="task">
+            <p class="qsub">
+              チェックを外すと対象から除外、数字を書き換えると削減時間が再計算されます。
+              <span class="est-badge" id="estBadge"></span>
+            </p>
+            <div class="bulkbar">
+              <button class="btn ghost sm" id="btnCheckAll">すべて選択</button>
+              <button class="btn ghost sm" id="btnUncheckAll">選択を解除</button>
+              <button class="btn ghost sm" id="btnReEstimate">推計値に戻す</button>
+              <span class="bulkinfo" id="taskSummary"></span>
+            </div>
+            <div id="taskList"></div>
+            <div class="addbox">
+              <h4>リストにない業務を追加する</h4>
+              <div class="addrow">
+                <input type="text" id="add_name" placeholder="業務名（例：協力会社への支払明細作成）">
+                <input type="number" id="add_hours" placeholder="月間時間" min="0" step="0.5">
+                <select id="add_cat"></select>
+                <select id="add_diff">
+                  <option value="1">難易度：低</option>
+                  <option value="2" selected>難易度：中</option>
+                  <option value="3">難易度：高</option>
+                </select>
+                <button class="btn sm" id="btnAddTask">＋ 追加</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabpane" data-pane="issue">
+            <p class="qsub">業種特性から想定される課題を選択済みです。ヒアリング結果に合わせて変更してください。</p>
+            <div class="chips" id="issueChips"></div>
+            <label class="fld mt24"><span>ヒアリングで伺った内容（自由記述・任意）</span>
+              <textarea id="f_issuefree" rows="4" placeholder="例）繁忙期は経理担当が毎日2時間残業している。属人化していて他の人が代われない。"></textarea></label>
+            <h4 class="q2">現在お使いのツール</h4>
+            <div class="chips" id="toolChips"></div>
+          </div>
+
+          <div class="tabpane" data-pane="calc">
+            <p class="qsub">業種の標準値を入れています。実態が分かる場合は書き換えてください。</p>
+            <div class="grid2">
+              <label class="fld"><span>人件費の時間単価（円）</span>
+                <input type="number" id="f_rate" step="100">
+                <em>給与＋社会保険料を含めた1時間あたりのコスト</em></label>
+              <label class="fld"><span>削減時間のうち営業活動に充てる割合（％）</span>
+                <input type="number" id="f_ratio" min="0" max="100">
+                <em>残りは残業削減・品質向上に充当する前提</em></label>
+              <label class="fld"><span>商談・顧客獲得1件あたりの所要時間</span>
+                <input type="number" id="f_perdeal" step="0.5" min="0.1"></label>
+              <label class="fld"><span>成約率（％）</span>
+                <input type="number" id="f_close" min="0" max="100"></label>
+              <label class="fld"><span>顧客1件あたりの平均取引額（円）</span>
+                <input type="number" id="f_deal" step="10000"></label>
+              <label class="fld"><span>想定する初期投資（円）</span>
+                <input type="number" id="f_invest" step="50000">
+                <em>ツール利用料・構築費の目安。投資回収期間の計算に使います</em></label>
+            </div>
+          </div>
+
+          <div class="tabpane" data-pane="demo">
+            <p class="qsub">報告会で実演する業務です。最も効果が高い業務を自動で選んでいます。</p>
+            <div id="demoPick" class="demopick"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="previewframe">
+        <div id="reportPreview"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-foot">
+    <button class="btn ghost" id="btnPrev">← 戻る</button>
+    <div class="progress"><div class="bar" id="progressBar"></div></div>
+    <button class="btn" id="btnNext">次へ →</button>
+  </footer>
+</div>
+
+<!-- ============ 印刷用レポート ============ -->
+<div id="reportPrint" class="print-only"></div>
+
+<script src="js/data.js"></script>
+<script src="js/report-css.js"></script>
+<script src="js/report.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
