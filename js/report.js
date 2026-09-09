@@ -56,6 +56,93 @@ function aiTypesOf(task) {
   return hit.length ? hit : [AI_TYPES[0]];
 }
 
+/* =========================================================
+   実際の仕上がりサンプル
+   （外部のAIに投げる「指示文」ではなく、レポートの中だけで
+     完結する「できあがりの実例」を業務ごとに生成する）
+   ========================================================= */
+const SAMPLE_GENERATORS = {
+  gen: (t, ctx) => `<div class="sample-doc">
+    <div class="sd-head">件名：${esc(t.name)}のご案内</div>
+    <div class="sd-body">${esc(ctx.contactLabel)} 様<br><br>
+    いつも大変お世話になっております。${esc(ctx.companyLabel)}でございます。<br>
+    このたびは${esc(t.name)}に関しまして、下記の通りご案内申し上げます。<br><br>
+    ■内容<br>
+    ・対象：<span class="ph">〇〇</span><br>
+    ・期日：<span class="ph">〇〇年〇〇月〇〇日</span><br>
+    ・金額／条件：<span class="ph">〇〇</span><br><br>
+    ご不明な点がございましたら、お気軽にお問い合わせください。<br>
+    今後ともよろしくお願い申し上げます。<br><br>
+    ────────────<br>${esc(ctx.companyLabel)}</div>
+  </div>
+  <div class="rp-note">※ 下線の<span class="ph">〇〇</span>部分だけ実際の内容に差し替えれば、そのまま送信できる状態です。ここまでは数秒でAIが作成します。</div>`,
+
+  ocr: (t, ctx) => `<table class="rt sample-tbl">
+    <tr><th style="width:120px">読み取り項目</th><th>AIが自動抽出した内容</th></tr>
+    <tr><td>日付</td><td>2026/08/15</td></tr>
+    <tr><td>取引先</td><td>株式会社サンプル${esc(ctx.industryShort)}</td></tr>
+    <tr><td>金額</td><td>¥48,400</td></tr>
+    <tr><td>摘要</td><td>${esc(t.name)}に関する費用</td></tr>
+    <tr><td>推奨する仕訳科目</td><td><b>消耗品費</b>（AIが自動提案・要確認）</td></tr>
+  </table>
+  <div class="rp-note">※ 紙・PDFを1枚撮影・スキャンするだけで、この表がAIによって自動的に埋まります。人は科目欄だけ確認します。</div>`,
+
+  bot: (t, ctx) => `<div class="sample-qa">
+    <div class="qa-row"><div class="qa-q">Q. 営業時間・対応日を教えてください</div><div class="qa-a">A. 平日9:00〜18:00で承っております。土日祝はお休みをいただいております。</div></div>
+    <div class="qa-row"><div class="qa-q">Q. ${esc(t.name)}について、概算でもよいので教えてほしい</div><div class="qa-a">A. 概算は本日中、正式なご案内は3営業日以内を目安にお送りします。詳しい内容が分かるものがあれば教えてください。</div></div>
+    <div class="qa-row"><div class="qa-q">Q. 担当者につないでもらえますか？</div><div class="qa-a">A. かしこまりました。内容を担当へ引き継ぎ、本日中に折り返しご連絡いたします。</div></div>
+  </div>
+  <div class="rp-note">※ 過去の問い合わせ履歴をAIに読み込ませておくと、上記のような一次回答がその場で自動生成されます。人は送信前に一目確認するだけです。</div>`,
+
+  flow: (t, ctx) => `<table class="rt sample-tbl">
+    <tr><th>これまで転記していた項目</th><th style="width:120px">転記元</th><th style="width:120px">転記先</th><th style="width:140px">自動化後</th></tr>
+    <tr><td>${esc(t.name)}の情報一式</td><td>受付フォーム／メール</td><td>基幹システム／台帳</td><td><b>自動反映（入力ゼロ）</b></td></tr>
+    <tr><td>金額・件数の確認</td><td>担当者の目視</td><td>Excel転記</td><td><b>システムが自動突合</b></td></tr>
+  </table>
+  <div class="rp-note">※ 「同じ情報を2回入力している箇所」を1本つなぐだけで、この転記作業そのものが消えます。</div>`,
+
+  data: (t, ctx) => `<table class="rt sample-tbl">
+    <tr><th>指標</th><th class="num" style="width:100px">今月</th><th class="num" style="width:90px">前月比</th></tr>
+    <tr><td>${esc(t.name)}に関する件数</td><td class="num">24件</td><td class="num" style="color:#0f8a7e;font-weight:700">+3件</td></tr>
+    <tr><td>対応完了率</td><td class="num">92%</td><td class="num" style="color:#0f8a7e;font-weight:700">+5pt</td></tr>
+    <tr><td>平均対応時間</td><td class="num">1.8時間</td><td class="num" style="color:#0f8a7e;font-weight:700">-0.4時間</td></tr>
+  </table>
+  <div class="rp-note">※ 各システムの数字を自動で集め、この形の一覧が毎朝・自動で更新される状態にします。</div>`,
+
+  voice: (t, ctx) => `<div class="sample-voice">
+    <div class="sv-lb">発言の抜粋（文字起こし）</div>
+    <div class="sv-raw">「じゃあ${esc(t.name)}の件、次回までに一度まとめておきましょうか。金額は先方に再確認してからにして、対応は田中さんお願いします」</div>
+    <div class="sv-arrow">▼ AIが自動要約</div>
+    <div class="sv-out">
+      <div><b>決定事項：</b>${esc(t.name)}について、次回までに内容をまとめる</div>
+      <div><b>担当：</b>田中</div>
+      <div><b>期限：</b>次回打ち合わせまで</div>
+      <div><b>補足：</b>金額は先方への再確認後に確定</div>
+    </div>
+  </div>
+  <div class="rp-note">※ 会議・電話を録音するだけで、この形の議事録がその場で自動生成されます。</div>`
+};
+
+function sampleArtifact(task, ctx) {
+  const key = (aiTypesOf(task)[0] || AI_TYPES[0]).key;
+  return (SAMPLE_GENERATORS[key] || SAMPLE_GENERATORS.gen)(task, ctx);
+}
+
+/* ---------- そのままコピーして他のAIに貼り付けられるプロンプト文 ---------- */
+const PROMPT_GENERATORS = {
+  gen: (t, ctx) => `「${t.name}」の文面を作成してください。\n・宛先：${ctx.contactLabel}\n・トーン：丁寧・簡潔なビジネス文書\n・含める内容：対象／期日／金額または条件\n過去に送った文面と同じ構成（挨拶→用件→結び）で、件名と本文を作ってください。`,
+  ocr: (t, ctx) => `添付した書類（${t.name}に関する領収書・請求書など）から、日付・取引先・金額・摘要を読み取り、表形式で出力してください。あわせて想定される勘定科目も1つ提案してください。`,
+  bot: (t, ctx) => `過去の問い合わせ履歴を参考に、「${t.name}」に関してお客様からよく来る質問への回答文を、丁寧語で3パターン作成してください。それぞれ2〜3文で簡潔にまとめてください。`,
+  flow: (t, ctx) => `「${t.name}」について、システムAとシステムBで重複して入力している項目を洗い出してください。どちらを正のデータとし、もう一方へどう自動反映すべきか、表形式で整理してください。`,
+  data: (t, ctx) => `「${t.name}」に関する数値データ（件数・金額など）を集計し、今月と先月を比較した一覧表を作成してください。増減が大きい項目には、考えられる理由のコメントを1行添えてください。`,
+  voice: (t, ctx) => `以下は「${t.name}」に関する会議・打ち合わせの文字起こしです。決定事項・担当者・期限を抽出し、簡潔な議事録にまとめてください。\n\n[ここに文字起こしを貼り付け]`
+};
+
+function promptFor(task, ctx) {
+  const key = (aiTypesOf(task)[0] || AI_TYPES[0]).key;
+  return (PROMPT_GENERATORS[key] || PROMPT_GENERATORS.gen)(task, ctx);
+}
+
 /* ---------- 計算 ---------- */
 function calcAll(st) {
   const sel = st.tasks.filter(t => t.on).map(t => {
@@ -208,6 +295,11 @@ function buildReport(st) {
   const demo = C.sel.find(t => t.id === st.demo) || C.sel[0];
   const prio = C.sel.filter(t => t.priority);
   const pages = [];
+  const ctx = {
+    companyLabel: co.name || (indName + '事業者'),
+    contactLabel: co.contact || 'ご担当者',
+    industryShort: ind ? ind.name.replace(/・.*/, '') : ''
+  };
 
   /* ---- P1 表紙 ---- */
   pages.push(`
@@ -397,24 +489,20 @@ function buildReport(st) {
 
   <div class="rp-h2">次ページ以降の見方</div>
   <div class="rp-lead rp-accent">
-    次ページからは <b>「どの業務を、AIをどう使って、どれだけ短縮できるのか」</b> を業務ごとに1枚ずつまとめています。<br>
-    各シートは「使うAI活用の型 → AIをどう使うか → 使用するツール → 最初の一歩（今週できること） → 削減時間」の順に記載しており、
-    社内での検討や担当者への指示にそのままお使いいただけます。
+    次ページからは、業務ごとに <b>「AIが実際に作る成果物のサンプル」まで、その場で見られる形</b> でまとめています。<br>
+    「使うAI活用の型」だけでなく、<b>仕上がりの実物イメージ・使用ツール・最初の一歩・削減時間</b>まで1枚に収めているため、
+    このレポート単体で内容が完結し、社内での検討や担当者への指示にそのままお使いいただけます。
   </div>
   ${pfoot(co.name)}
 </div>`);
 
-  /* ---- P5〜 AI活用シート ---- */
-  const sheets = C.sel.slice(0, 12);
-  const perPage = 2;
-  for (let i = 0; i < sheets.length; i += perPage) {
-    const chunk = sheets.slice(i, i + perPage);
+  /* ---- P5〜 AI活用シート（実際の仕上がりサンプル付き・1業務1ページ） ---- */
+  const sheets = C.sel.slice(0, 10);
+  sheets.forEach((t, i) => {
+    const types = aiTypesOf(t).slice(0, 2);
     pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">4</span>業務別：AIの使い方と削減時間${i === 0 ? '' : '（続き）'}</div>
-  ${chunk.map(t => {
-      const types = aiTypesOf(t).slice(0, 2);
-      return `
+  <div class="rp-h"><span class="no">4</span>業務別：AIの使い方と仕上がりサンプル${i === 0 ? '' : '（続き）'}</div>
   <div class="aisheet">
     <div class="aisheet-h"><span class="ttl">${esc(t.name)}</span><span class="rank">優先度 ${t.rank}位 ／ 難易度 ${DIFF_LABEL[t.diff]}</span></div>
     <div class="aisheet-b">
@@ -422,7 +510,10 @@ function buildReport(st) {
       <p><b>${types.map(x => esc(x.name)).join(' ＋ ')}</b></p>
       <div class="lb">■ AIをどう使うか</div>
       <p>${esc(t.how)}</p>
-      <p style="color:#5d6f80;font-size:12.2px">${esc(types[0].how)}</p>
+      <div class="lb">■ 実際の仕上がりサンプル（このレポートだけで完結します）</div>
+      ${sampleArtifact(t, ctx)}
+      <div class="lb">■ そのまま使えるプロンプト（お好みでChatGPT等に貼り付けてもお使いいただけます）</div>
+      <div class="promptbox">${esc(promptFor(t, ctx)).replace(/\n/g, '<br>')}</div>
       <div class="lb">■ 使用するツール（候補）</div>
       <p>${(t.tools || []).map(esc).join('　/　') || '—'}</p>
       <div class="lb">■ 最初の一歩（今週できること）</div>
@@ -434,11 +525,10 @@ function buildReport(st) {
         <div><div class="el">年間の効果</div><div class="ev acc">${man(t.saved * 12 * st.calc.rate)}</div></div>
       </div>
     </div>
-  </div>`;
-    }).join('')}
+  </div>
   ${pfoot(co.name)}
 </div>`);
-  }
+  });
 
   /* ---- 効果試算 ---- */
   pages.push(`
@@ -569,6 +659,18 @@ function buildReport(st) {
     </div>
   </div>
 
+  ${pfoot(co.name)}
+</div>
+
+<div class="page">
+  <div class="rp-h"><span class="no">8</span>実演する自動化：できあがりのサンプル</div>
+  <div class="rp-lead rp-accent">
+    実演では、実際にAIが下記のような成果物をその場で作成する様子をご覧いただきます。<br>
+    このページに掲載したサンプルが、そのまま「導入後に日常的に出てくるもの」のイメージです。
+  </div>
+  ${sampleArtifact(demo, ctx)}
+  <div class="lb" style="margin-top:10px">■ そのまま使えるプロンプト（お好みでChatGPT等に貼り付けてもお使いいただけます）</div>
+  <div class="promptbox">${esc(promptFor(demo, ctx)).replace(/\n/g, '<br>')}</div>
   ${pfoot(co.name)}
 </div>
 
