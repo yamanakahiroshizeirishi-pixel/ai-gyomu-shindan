@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI業務自動化 診断レポート作成ツール</title>
+<title>AI経営参謀</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,8 +16,8 @@
       <div class="brand">
         <span class="logo">◆</span>
         <div>
-          <div class="brand-name">AI業務自動化 診断レポート作成ツール</div>
-          <div class="brand-sub">業種を選ぶだけで、報告会でお渡しする診断レポートが完成します</div>
+          <div class="brand-name">AI経営参謀</div>
+          <div class="brand-sub">社長の右腕として、経営の状況を診断し打ち手を提言します</div>
         </div>
       </div>
       <div class="head-actions">
@@ -33,10 +33,9 @@
 
     <!-- STEP 1 業種 -->
     <section class="step" data-step="1">
-      <h2 class="q">Q1. 診断先の事業内容を選んでください</h2>
+      <h2 class="q">Q1. 事業の内容を選んでください</h2>
       <p class="qsub">
-        選んだ業種の一般的な業務内容・作業時間をもとに、<b>時間のかかっている業務とその削減効果を自動で推計</b>します。<br>
-        入力はこの1問と、次の「従業員数」だけです。
+        経営参謀として状況を診断するための最初の質問です。選んだ業種をもとに、<b>その業種で起きやすい経営課題と、打てる手を推計</b>します。
       </p>
       <div class="cards" id="industryCards"></div>
     </section>
@@ -50,10 +49,20 @@
 
     <!-- STEP 3 削減したい業務 -->
     <section class="step" data-step="3">
-      <h2 class="q">Q3. 特に「時間の無駄」と感じている業務はどれですか</h2>
+      <h2 class="q">Q3. 経営の状況を教えてください</h2>
+      <p class="qsub">
+        ここが本題です。<b>経営参謀としての提言</b>を組み立てるための質問です。
+        各項目、直感で1つ選んでください。<b>迷う項目は空欄のままでも作成できます。</b>
+      </p>
+      <div id="mgmtQuestions"></div>
+    </section>
+
+    <!-- STEP 4 時間の無駄 -->
+    <section class="step" data-step="4">
+      <h2 class="q">Q4. 特に「時間の無駄」と感じている業務はどれですか</h2>
       <p class="qsub" id="wasteLead"></p>
       <p class="qsub">
-        当てはまるものをクリックしてください（複数選択できます）。
+        提言の裏付けとなる、具体的な打ち手を挙げるための補足質問です（複数選択可）。
         選んだ業務は<b>優先的に着手する業務</b>として、報告書の上位と実演デモに反映されます。
         <b>選ばなくても報告書は作成できます。</b>
       </p>
@@ -67,9 +76,9 @@
       </p>
     </section>
 
-    <!-- STEP 4 報告書 -->
-    <section class="step" data-step="4">
-      <h2 class="q">Q4. 診断レポートが完成しました</h2>
+    <!-- STEP 5 報告書 -->
+    <section class="step" data-step="5">
+      <h2 class="q">Q5. 診断レポートが完成しました</h2>
       <p class="qsub" id="autoSummary"></p>
 
       <div class="outbar">

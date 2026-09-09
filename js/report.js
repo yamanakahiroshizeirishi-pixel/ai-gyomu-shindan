@@ -272,6 +272,28 @@ function prioTable(rows, total) {
   </table>`;
 }
 
+/* ---------- 経営参謀からの提言（自動化に限らない経営全般の助言） ---------- */
+function mgmtLabel(key, val) {
+  const q = MGMT_QUESTIONS.find(x => x.key === key);
+  const o = q && q.options.find(x => x.v === val);
+  return o ? o.label : '';
+}
+function mgmtCard(qLabel, answerLabel, advice) {
+  return `<div class="advcard">
+    <div class="adv-h"><span class="adv-q">${esc(qLabel)}</span><span class="adv-a">${esc(answerLabel)}</span></div>
+    <div class="adv-b">
+      <div><b>診断：</b>${esc(advice.diag)}</div>
+      <div><b>見るべき指標：</b>${esc(advice.watch)}</div>
+      <div><b>次の一手：</b>${esc(advice.action)}</div>
+    </div>
+  </div>`;
+}
+function mgmtAdviceCards(mgmt) {
+  return MGMT_QUESTIONS
+    .filter(q => mgmt[q.key] && MGMT_ADVICE[q.key] && MGMT_ADVICE[q.key][mgmt[q.key]])
+    .map(q => mgmtCard(q.label, mgmtLabel(q.key, mgmt[q.key]), MGMT_ADVICE[q.key][mgmt[q.key]]));
+}
+
 function fmtDate(v) {
   if (!v) return '';
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
@@ -280,7 +302,7 @@ function fmtDate(v) {
 
 function pfoot(co) {
   /* ページ番号は最後に一括で差し替える */
-  return `<div class="pfoot"><span>AI業務自動化 診断レポート ／ ${esc(co || '')}</span><span>__PN__ / __TT__</span></div>`;
+  return `<div class="pfoot"><span>AI経営参謀 診断レポート ／ ${esc(co || '')}</span><span>__PN__ / __TT__</span></div>`;
 }
 
 /* =========================================================
@@ -304,9 +326,9 @@ function buildReport(st) {
   /* ---- P1 表紙 ---- */
   pages.push(`
 <div class="page rp-cover">
-  <div class="cv-label">A I 業 務 自 動 化 診 断</div>
-  <h1>業務自動化 診断レポート</h1>
-  <div class="cv-sub">— 削減できる業務の特定と、AI活用による改善仕様書 —</div>
+  <div class="cv-label">A I 経 営 参 謀 診 断</div>
+  <h1>経営参謀 診断レポート</h1>
+  <div class="cv-sub">— 経営の見立てと、具体的な打ち手の提言 —</div>
   <div class="cv-line"></div>
   <div class="cv-co">${co.name ? esc(co.name) + ' 御中' : esc(indName) + ' 経営者 様'}</div>
   <div class="cv-to">${esc(co.contact || '')}</div>
@@ -369,6 +391,26 @@ function buildReport(st) {
   ${pfoot(co.name)}
 </div>`);
 
+  /* ---- 経営参謀からの提言（Q4の回答があるときのみ・2件ずつページ分割） ---- */
+  const advCards = mgmtAdviceCards(st.mgmt || {});
+  if (advCards.length) {
+    for (let i = 0; i < advCards.length; i += 2) {
+      const chunk = advCards.slice(i, i + 2);
+      const last = i + 2 >= advCards.length;
+      pages.push(`
+<div class="page">
+  <div class="rp-h"><span class="no">2</span>経営参謀からの提言${i ? '（続き）' : ''}</div>
+  ${i ? '' : `<div class="rp-lead rp-accent">
+    自動化の話に限らず、お伺いした経営の状況をもとに、<b>経営参謀としての見立てと次の一手</b>をまとめました。<br>
+    診断結果（削減時間・売上インパクト）と合わせて、経営判断の材料としてお使いください。
+  </div>`}
+  ${chunk.join('')}
+  ${last ? `<div class="rp-note">※ ここでの助言は、いただいた回答1問ごとの一般的な傾向にもとづくものです。数値の裏付けが必要な論点は、顧問税理士・専門家とあわせてご確認ください。</div>` : ''}
+  ${pfoot(co.name)}
+</div>`);
+    }
+  }
+
   /* ---- 経営者が挙げた重点業務（独立ページ・16行ごとに分割） ---- */
   if (prio.length) {
     const pTotal = {
@@ -428,7 +470,7 @@ function buildReport(st) {
     const last = ci === chunks.length - 1;
     pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">2</span>自動化できる業務の一覧${ci ? '（続き）' : ''}</div>
+  <div class="rp-h"><span class="no">3</span>具体的な打ち手：時間を生み出す方法${ci ? '（続き）' : ''}</div>
   ${ci ? '' : `<div class="rp-lead">
     削減時間が大きく、かつ着手しやすい順に並べています。<br>
     <span style="font-size:12px">※「削減後」は自動化を導入した後に人が行う作業時間の想定です。ゼロにはならず、確認・判断の時間は残ります。</span>
@@ -452,7 +494,7 @@ function buildReport(st) {
   /* ---- 着手の順番（グラフ2種） ---- */
   pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">3</span>着手する順番の考え方</div>
+  <div class="rp-h"><span class="no">4</span>着手する順番の考え方</div>
   <div class="rp-lead">
     「効果の大きさ」と「導入のしやすさ」の2軸で整理しました。<b>効果が大きく、導入が容易なものから着手</b>することで、
     早い段階で社内に成功体験が生まれ、その後の取り組みが進みやすくなります。番号は前ページの順位です。
@@ -467,7 +509,7 @@ function buildReport(st) {
   /* ---- 優先度の判定ルール＋段階の整理 ---- */
   pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">3</span>優先度の判定ルール</div>
+  <div class="rp-h"><span class="no">4</span>優先度の判定ルール</div>
   <table class="rt">
     <tr><th style="width:110px">優先度</th><th>該当する業務の特徴</th><th style="width:110px">着手の目安</th></tr>
     <tr><td><span class="pill d1">最優先</span></td><td>削減時間が大きく、既存ツールの設定変更や生成AIの利用ですぐ始められる業務</td><td>1〜30日目</td></tr>
@@ -502,7 +544,7 @@ function buildReport(st) {
     const types = aiTypesOf(t).slice(0, 2);
     pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">4</span>業務別：AIの使い方と仕上がりサンプル${i === 0 ? '' : '（続き）'}</div>
+  <div class="rp-h"><span class="no">5</span>打ち手の具体化：AIの使い方と仕上がりサンプル${i === 0 ? '' : '（続き）'}</div>
   <div class="aisheet">
     <div class="aisheet-h"><span class="ttl">${esc(t.name)}</span><span class="rank">優先度 ${t.rank}位 ／ 難易度 ${DIFF_LABEL[t.diff]}</span></div>
     <div class="aisheet-b">
@@ -533,7 +575,7 @@ function buildReport(st) {
   /* ---- 効果試算 ---- */
   pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">5</span>削減効果の試算</div>
+  <div class="rp-h"><span class="no">6</span>削減効果の試算</div>
   <div class="rp-lead">
     削減時間を金額に換算しました。時間単価は ${yen(st.calc.rate)}（給与・賞与・社会保険料を含む1時間あたりのコスト）で試算しています。
   </div>
@@ -566,7 +608,7 @@ function buildReport(st) {
   /* ---- 売上インパクト ---- */
   pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">6</span>生まれた時間による売上インパクト</div>
+  <div class="rp-h"><span class="no">7</span>生まれた時間による売上インパクト</div>
   <div class="rp-lead">
     自動化の効果は「コスト削減」だけではありません。空いた時間を営業・顧客対応に振り向けた場合の売上への影響を試算しました。
   </div>
@@ -604,7 +646,7 @@ function buildReport(st) {
   ];
   pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">7</span>実行ロードマップ（90日）</div>
+  <div class="rp-h"><span class="no">8</span>実行ロードマップ（90日）</div>
   <div class="rp-lead">
     すべてを同時に進める必要はありません。<b>効果が出やすいものから順に、3段階</b>で進めることを推奨します。
   </div>
@@ -622,7 +664,7 @@ function buildReport(st) {
 </div>
 
 <div class="page">
-  <div class="rp-h"><span class="no">7</span>推進のためのチェックリスト</div>
+  <div class="rp-h"><span class="no">8</span>推進のためのチェックリスト</div>
   <div class="rp-lead">実行段階でつまずかないよう、進め方の要点をチェックリストにまとめました。</div>
   <ul class="checklist">
     <li>推進担当者を1名決める（兼任で構いません）</li>
@@ -640,7 +682,7 @@ function buildReport(st) {
     const dtypes = aiTypesOf(demo);
     pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">8</span>報告会で実演する自動化の仕様</div>
+  <div class="rp-h"><span class="no">9</span>報告会で実演する打ち手の仕様</div>
   <div class="rp-lead">
     今回の報告会では <b>「${esc(demo.name)}」</b> を対象に、実際に動く自動化をご覧いただきます。${demo.priority ? '（特に負担を感じているとお伺いした業務です）' : ''}
     ここに記載した内容が、そのまま社内での構築仕様書としてお使いいただけます。
@@ -663,7 +705,7 @@ function buildReport(st) {
 </div>
 
 <div class="page">
-  <div class="rp-h"><span class="no">8</span>実演する自動化：できあがりのサンプル</div>
+  <div class="rp-h"><span class="no">9</span>実演する打ち手：できあがりのサンプル</div>
   <div class="rp-lead rp-accent">
     実演では、実際にAIが下記のような成果物をその場で作成する様子をご覧いただきます。<br>
     このページに掲載したサンプルが、そのまま「導入後に日常的に出てくるもの」のイメージです。
@@ -675,7 +717,7 @@ function buildReport(st) {
 </div>
 
 <div class="page">
-  <div class="rp-h"><span class="no">8</span>実演する自動化の仕様と導入手順</div>
+  <div class="rp-h"><span class="no">9</span>実演する打ち手の仕様と導入手順</div>
   <div class="rp-h2">仕様の概要</div>
   <table class="rt">
     <tr><th style="width:150px">項目</th><th>内容</th></tr>
@@ -706,7 +748,7 @@ function buildReport(st) {
   /* ---- 留意点・次のアクション ---- */
   pages.push(`
 <div class="page">
-  <div class="rp-h"><span class="no">9</span>導入にあたっての留意点</div>
+  <div class="rp-h"><span class="no">10</span>導入にあたっての留意点</div>
   <div class="risk">
     <p style="margin-top:0"><b>1. 情報の取り扱い</b><br>
     顧客情報・個人情報を生成AIに入力する場合は、学習に使われない設定（法人プラン等）を利用してください。社内で「入力してよい情報／いけない情報」のルールを先に決めることを推奨します。</p>
@@ -724,7 +766,7 @@ function buildReport(st) {
 </div>
 
 <div class="page">
-  <div class="rp-h"><span class="no">10</span>次のアクション</div>
+  <div class="rp-h"><span class="no">11</span>次のアクション</div>
   <table class="rt">
     <tr><th class="ctr" style="width:40px">No</th><th style="width:200px">アクション</th><th style="width:110px">期限の目安</th><th>担当</th></tr>
     <tr><td class="ctr">1</td><td>推進担当者の決定</td><td>報告会から1週間以内</td><td>${esc(co.contact || '経営者')}</td></tr>

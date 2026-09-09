@@ -200,6 +200,17 @@ input,select,textarea,button{font-family:inherit;font-size:15px;}
 .wb-cat{display:inline-block;font-size:10.5px;color:var(--sub);background:#eef2f6;border-radius:9px;padding:1px 9px;margin-top:5px;}
 .prio-mark{font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:3px;padding:1px 6px;vertical-align:1px;}
 
+/* ========== 経営の状況（経営参謀への質問） ========== */
+.mgmtq{margin-bottom:22px;}
+.mgmtq-h{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:10px;}
+.mgmtq-opts{display:flex;flex-wrap:wrap;gap:10px;}
+.mgmtbtn{
+  border:2px solid var(--line);background:#fbfcfd;border-radius:22px;padding:9px 18px;
+  cursor:pointer;font-size:13.5px;color:var(--ink);transition:.15s;
+}
+.mgmtbtn:hover{border-color:var(--accent);}
+.mgmtbtn.on{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700;}
+
 /* ========== レポート ==========
    レポート本体のスタイルは js/report-css.js（REPORT_CSS）に集約しています。
    画面プレビュー・印刷・単体HTML書き出しで同じCSSを使うためです。 */

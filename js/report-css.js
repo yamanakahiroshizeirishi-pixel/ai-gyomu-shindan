@@ -101,6 +101,16 @@ table.rt tfoot td{background:#e6f4f2 !important;font-weight:700;color:#12314f;}
 .sv-out b{color:#12314f;}
 .promptbox{background:#12314f;color:#dfe9f0;border-radius:7px;padding:8px 12px;margin-top:3px;font-family:"Consolas","SF Mono",Menlo,monospace;font-size:11px;line-height:1.55;white-space:normal;}
 
+/* ---- 経営参謀からの提言 ---- */
+.advcard{border:1px solid #dbe3ea;border-radius:9px;margin-bottom:12px;overflow:hidden;break-inside:avoid;}
+.adv-h{background:#1d4b78;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.adv-q{font-weight:700;font-size:13.5px;}
+.adv-a{background:#0f8a7e;border-radius:4px;font-size:11.5px;padding:2px 10px;font-weight:700;white-space:nowrap;}
+.adv-b{padding:11px 14px;font-size:12.6px;line-height:1.85;}
+.adv-b b{color:#12314f;}
+.adv-b>div{margin-bottom:5px;}
+.adv-b>div:last-child{margin-bottom:0;}
+
 .phase{border:1px solid #dbe3ea;border-radius:9px;margin-bottom:12px;overflow:hidden;break-inside:avoid;}
 .phase-h{padding:8px 14px;color:#fff;display:flex;justify-content:space-between;font-weight:700;font-size:13.5px;gap:10px;}
 .p1 .phase-h{background:#1e7a4d;}

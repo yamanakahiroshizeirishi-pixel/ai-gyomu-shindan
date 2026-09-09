@@ -1,10 +1,10 @@
 /* =========================================================
-   業務自動化診断アプリ  —  画面ロジック
-   入力は「業種」と「従業員数」の2問のみ。
-   残りは業種別パラメータ（INDUSTRY_DEFAULTS）から自動推計する。
+   AI経営参謀  —  画面ロジック
+   業種・従業員数・経営の状況を答えると、社長の右腕として
+   経営参謀からの提言（＋具体的な打ち手）をレポート化する。
    ========================================================= */
 
-const STEP_NAMES = ['事業内容', '従業員数', '無駄と感じる業務', '報告書'];
+const STEP_NAMES = ['事業内容', '従業員数', '経営の状況', '無駄と感じる業務', '報告書'];
 const CATS = ['営業', '顧客対応', '経理・財務', '人事・労務', '社内管理', '現場業務'];
 const LS_KEY = 'shindan_state_v3';
 
@@ -24,6 +24,7 @@ function newState() {
     env: { tools: [], literacy: '一般的な業務ソフトは使える', data: 'Excel等のファイルが各所に分散', ai: '使っていない', owner: '社内に担当者を置ける' },
     issues: { items: [], free: '' },
     calc: { rate: 3000, ratio: 30, perdeal: 3, close: 25, deal: 300000, invest: 500000 },
+    mgmt: {},   /* 経営の状況（資金繰り・値付け・人手不足の方針・競合・方向性） */
     demo: '',
     estimated: true   /* 作業時間が自動推計のままか */
   };
@@ -131,8 +132,9 @@ function goto(n) {
   $('#progressBar').style.width = (n / STEP_NAMES.length * 100) + '%';
   $('#btnPrev').disabled = n === 1;
   $('#btnNext').style.visibility = n === STEP_NAMES.length ? 'hidden' : 'visible';
-  if (n === 3) renderWaste();
-  if (n === 4) { renderTasks(); renderDemoPick(); renderReport(); }
+  if (n === 3) renderMgmt();
+  if (n === 4) renderWaste();
+  if (n === 5) { renderTasks(); renderDemoPick(); renderReport(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
   save(true);
 }
@@ -215,6 +217,24 @@ function updateWasteSummary() {
   const n = st.tasks.filter(t => t.priority).length;
   const el = $('#wasteSummary'); if (!el) return;
   el.textContent = n ? `${n}件を重点業務として選択中` : '未選択（選ばなくても作成できます）';
+}
+
+/* ---------- 経営の状況（経営参謀としての提言に使う質問） ---------- */
+function renderMgmt() {
+  const box = $('#mgmtQuestions'); if (!box) return;
+  box.innerHTML = MGMT_QUESTIONS.map(q => `
+    <div class="mgmtq">
+      <div class="mgmtq-h">${q.label}</div>
+      <div class="mgmtq-opts">
+        ${q.options.map(o => `<button class="mgmtbtn ${st.mgmt[q.key] === o.v ? 'on' : ''}" data-mkey="${q.key}" data-mval="${o.v}">${o.label}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  box.onclick = e => {
+    const b = e.target.closest('[data-mkey]'); if (!b) return;
+    const key = b.dataset.mkey, val = b.dataset.mval;
+    st.mgmt[key] = st.mgmt[key] === val ? '' : val;  /* もう一度押すと選択解除 */
+    renderMgmt(); save(true);
+  };
 }
 
 /* ---------- 業務リスト ---------- */
@@ -346,7 +366,7 @@ function safeFilename(s) {
    ローカルでindex.htmlを開いている場合は通常のダウンロードで保存する。
    共有リンク（Artifact）上で開いている場合はビューアーの保存確認を経由する。 */
 async function downloadHTML() {
-  const title = safeFilename(`AI業務自動化診断レポート_${st.company.name || (INDUSTRIES.find(i => i.id === st.company.industry) || {}).name || '無題'}`);
+  const title = safeFilename(`AI経営参謀診断レポート_${st.company.name || (INDUSTRIES.find(i => i.id === st.company.industry) || {}).name || '無題'}`);
   const filename = title + '.html';
   const doc = `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="UTF-8">
@@ -406,7 +426,7 @@ function bindForm() {
       st[grp][key] = el.type === 'number' ? (el.value === '' ? '' : Number(el.value)) : el.value;
       if (grp === 'calc') st.calcEdited = true;
       if (grp === 'issues') st.issueEdited = true;
-      if (st.step === 4) refresh(); else save(true);
+      if (st.step === 5) refresh(); else save(true);
     });
   });
 }
@@ -450,6 +470,7 @@ function renderAll() {
   renderIndustries();
   renderSizes();
   renderWaste();
+  renderMgmt();
   renderTasks();
   renderChips('#toolChips', TOOL_OPTIONS, st.env.tools, () => st.envEdited = true);
   renderChips('#issueChips', ISSUE_OPTIONS, st.issues.items, () => st.issueEdited = true);
