@@ -294,6 +294,69 @@ function mgmtAdviceCards(mgmt) {
     .map(q => mgmtCard(q.label, mgmtLabel(q.key, mgmt[q.key]), MGMT_ADVICE[q.key][mgmt[q.key]]));
 }
 
+/* ---------- 「経営の状況」の回答から、相談したいことを自動で1つ判断する ----------
+   単純な「不安がある／自信がない」だけでなく、回答の深刻度で優先順位をつけ、
+   その論点の「次の一手」（MGMT_ADVICE）を具体化させる質問文をAI向けに組み立てる。 */
+const MGMT_CONCERN_SEVERITY = {
+  cashflow: { ok: 0, tight: 2, unknown: 2 },
+  pricing: { confident: 0, unsure: 1, stale: 1 },
+  hiring: { hire: 1, automate: 0, unknown: 2 },
+  competition: { clear: 0, vague: 1, none: 2 },
+  direction: { grow: 0, maintain: 0, succession: 1 }
+};
+function autoConsultQuestion(st, C) {
+  const mgmt = st.mgmt || {};
+  let top = null, topScore = -1;
+  MGMT_QUESTIONS.forEach(q => {
+    const v = mgmt[q.key]; if (!v) return;
+    const score = (MGMT_CONCERN_SEVERITY[q.key] || {})[v] || 0;
+    if (score > topScore) { topScore = score; top = q; }
+  });
+  if (top) {
+    const v = mgmt[top.key];
+    const advice = MGMT_ADVICE[top.key] && MGMT_ADVICE[top.key][v];
+    if (advice) {
+      return `特に「${top.label}」について、現状は${mgmtLabel(top.key, v)}という状況です。提言でいただいた『${advice.action}』を、当社の実情に当てはめて、具体的な実行手順（誰が・いつまでに・何をするか）まで落とし込んでください。`;
+    }
+  }
+  const prio = C.sel.filter(t => t.priority);
+  if (prio.length) {
+    const names = prio.slice(0, 3).map(t => t.name).join('、');
+    return `特に負担に感じている「${names}」の効率化を進めながら、経営全体として次に着手すべき打ち手を、優先順位をつけて具体的に教えてください。`;
+  }
+  return `上記の診断結果を踏まえて、経営全体として今いちばん優先すべき打ち手は何か、理由とあわせて教えてください。`;
+}
+
+/* ---------- この診断だけでは足りない場合に、他のAIへ相談を続けるためのプロンプト ---------- */
+function advisorPromptText(st, C, indName) {
+  const mgmt = st.mgmt || {};
+  const mgmtLines = MGMT_QUESTIONS
+    .filter(q => mgmt[q.key])
+    .map(q => `・${q.label}→${mgmtLabel(q.key, mgmt[q.key])}`);
+  const prio = C.sel.filter(t => t.priority);
+  const prioLine = prio.length
+    ? prio.slice(0, 5).map(t => t.name).join('、') + (prio.length > 5 ? ` ほか${prio.length - 5}件` : '')
+    : 'とくに指定なし';
+
+  return `あなたは中小企業の経営参謀（社長の右腕）です。以下はある会社の診断結果です。この内容を前提に、社長からの追加相談に具体的に答えてください。
+
+【会社の状況】
+業種：${indName}／従業員数：${st.company.emp}名
+
+【経営の状況（ヒアリング回答）】
+${mgmtLines.length ? mgmtLines.join('\n') : '・未回答'}
+
+【診断結果】
+削減時間：月${h1(C.savedM)}h（年間${h1(C.savedY)}h）／人件費削減：年間約${man(C.costY)}／売上インパクト：年間約${man(C.revenueY)}
+特に負担に感じている業務：${prioLine}
+
+【社長として、いま相談したいこと】
+${autoConsultQuestion(st, C)}
+※この内容は診断結果から自動で作成しています。実際の状況に合わせて書き換えてからAIに貼り付けてください。
+
+上記を踏まえ、経営参謀として、根拠とあわせて具体的な打ち手を提案してください。`;
+}
+
 function fmtDate(v) {
   if (!v) return '';
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
@@ -784,11 +847,25 @@ function buildReport(st) {
     ${esc(dateStr || '')}<br><b style="font-size:15px;color:#12314f">${esc(co.analyst || '')}</b>
   </div>
   ${pfoot(co.name)}
+</div>
+
+<div class="page">
+  <div class="rp-h"><span class="no">12</span>この診断で足りないときは：AIに続けて相談する</div>
+  <div class="rp-lead rp-accent">
+    もっと踏み込んで相談したい、状況が変わったという場合は、下記をそのままコピーしてChatGPTやClaudeなど、お好きなAIに貼り付けてください。<b>この診断内容を前提にした状態から、続きの相談</b>ができます。
+  </div>
+  <div class="lb" style="font-size:11px;font-weight:700;color:#1d4b78;margin-bottom:2px">■ コピーして貼り付けるプロンプト</div>
+  <div class="promptbox" style="font-size:10.8px;line-height:1.55">${esc(advisorPromptText(st, C, indName)).replace(/\n/g, '<br>')}</div>
+  <div class="rp-note">※税務・法務など専門判断が必要な内容は、AIの回答をそのまま実行せず、顧問税理士・専門家にご確認ください。</div>
+  ${pfoot(co.name)}
 </div>`);
 
-  /* ページ番号を振り直す */
-  const total = pages.length;
-  return pages
+  /* ページ番号を振り直す
+     ※ pages配列の1要素に複数の<div class="page">が入っていることがあるため、
+       配列の添字ではなく実際のページ区切り（<div class="page">の直前）で分割し直してから採番する。 */
+  const pageBlocks = pages.join('').split(/(?=<div class="page">)/).filter(s => s.trim());
+  const total = pageBlocks.length;
+  return pageBlocks
     .map((p, i) => p.replace('__PN__', String(i + 1)).replace('__TT__', String(total)))
     .join('');
 }
