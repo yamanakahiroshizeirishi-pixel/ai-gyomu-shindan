@@ -351,8 +351,7 @@ function renderReport() {
 
   const ind = INDUSTRIES.find(i => i.id === st.company.industry);
   $('#autoSummary').innerHTML = ind
-    ? `<b>${ind.name}・従業員${st.company.emp}名</b>の一般的な業務内容から、
-       <b>${C.sel.length}件の業務</b>で <b>月${h1(C.savedM)}時間</b>（年間 ${man(C.costY)}）の削減余地を推計しました。
+    ? `<b>${ind.name}・従業員${st.company.emp}名</b>の内容から、経営参謀としての見立てと打ち手をまとめました（時間削減はあくまで手段の一つです）。
        印刷ダイアログで「PDFとして保存」を選ぶとPDFになります。`
     : '';
 }

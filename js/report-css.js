@@ -28,6 +28,11 @@ const REPORT_CSS = `
 .cv-hero .hv{font-size:24px;font-weight:700;color:#0f8a7e;line-height:1.3;}
 .cv-hero .hu{font-size:11px;color:#5d6f80;}
 
+.cv-direction{margin-top:32px;padding:18px 22px;border:1px solid #9fd5cd;background:#eaf6f3;border-radius:10px;text-align:left;}
+.cv-direction .cvd-label{font-size:11px;font-weight:700;color:#0f8a7e;letter-spacing:.1em;}
+.cv-direction .cvd-text{font-size:14.5px;color:#12314f;line-height:1.7;margin-top:6px;}
+.cv-ref{margin-top:14px;font-size:11.5px;color:#5d6f80;}
+
 .rp-h{font-size:19px;color:#12314f;border-bottom:2.5px solid #0f8a7e;padding-bottom:6px;margin-bottom:16px;display:flex;align-items:baseline;gap:10px;}
 .rp-h .no{background:#0f8a7e;color:#fff;font-size:12px;padding:2px 10px;border-radius:4px;}
 .rp-h2{font-size:15.5px;color:#12314f;margin:20px 0 8px;padding-left:10px;border-left:4px solid #1d4b78;}
@@ -121,7 +126,7 @@ table.rt tfoot td{background:#e6f4f2 !important;font-weight:700;color:#12314f;}
 
 .checklist{list-style:none;padding:0;margin:0;font-size:12.8px;}
 .checklist li{padding:7px 0 7px 26px;border-bottom:1px dashed #dbe3ea;position:relative;}
-.checklist li:before{content:"\\2610";position:absolute;left:4px;top:6px;color:#0f8a7e;font-size:15px;}
+.checklist li:before{content:"☐";position:absolute;left:4px;top:6px;color:#0f8a7e;font-size:15px;}
 
 .risk{border:1px solid #e8d5a8;background:#fdfaf1;border-radius:8px;padding:12px 16px;font-size:12.6px;}
 .risk b{color:#8a6508;}
