@@ -28,7 +28,7 @@ report_js = read('js/report.js')
 app_js = read('js/app.js')
 
 out = f'''<meta charset="UTF-8">
-<title>AI業務自動化診断</title>
+<title>AI経営参謀</title>
 <style>
 {css}
 </style>
