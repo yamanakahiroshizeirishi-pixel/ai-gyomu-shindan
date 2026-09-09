@@ -294,9 +294,10 @@ function mgmtAdviceCards(mgmt) {
     .map(q => mgmtCard(q.label, mgmtLabel(q.key, mgmt[q.key]), MGMT_ADVICE[q.key][mgmt[q.key]]));
 }
 
-/* ---------- 「経営の状況」の回答から、相談したいことを自動で1つ判断する ----------
-   単純な「不安がある／自信がない」だけでなく、回答の深刻度で優先順位をつけ、
-   その論点の「次の一手」（MGMT_ADVICE）を具体化させる質問文をAI向けに組み立てる。 */
+/* ---------- 「経営の状況」の回答から、相談したいことを自動で判断する ----------
+   単純に1問だけ見るのではなく、5問すべての回答を深刻度でランキングし、
+   気になる論点が複数あればまとめて、無ければ（総じて良好なら）前向きな相談に
+   切り替える。各論点の「次の一手」（MGMT_ADVICE）を具体化させる質問文を組み立てる。 */
 const MGMT_CONCERN_SEVERITY = {
   cashflow: { ok: 0, tight: 2, unknown: 2 },
   pricing: { confident: 0, unsure: 1, stale: 1 },
@@ -306,19 +307,33 @@ const MGMT_CONCERN_SEVERITY = {
 };
 function autoConsultQuestion(st, C) {
   const mgmt = st.mgmt || {};
-  let top = null, topScore = -1;
-  MGMT_QUESTIONS.forEach(q => {
-    const v = mgmt[q.key]; if (!v) return;
-    const score = (MGMT_CONCERN_SEVERITY[q.key] || {})[v] || 0;
-    if (score > topScore) { topScore = score; top = q; }
-  });
-  if (top) {
-    const v = mgmt[top.key];
-    const advice = MGMT_ADVICE[top.key] && MGMT_ADVICE[top.key][v];
-    if (advice) {
-      return `特に「${top.label}」について、現状は${mgmtLabel(top.key, v)}という状況です。提言でいただいた『${advice.action}』を、当社の実情に当てはめて、具体的な実行手順（誰が・いつまでに・何をするか）まで落とし込んでください。`;
+  const answered = MGMT_QUESTIONS
+    .map(q => ({ q, v: mgmt[q.key] }))
+    .filter(x => x.v);
+
+  if (answered.length) {
+    /* 5問すべてを深刻度でランキング（同点は質問の並び順を維持） */
+    const ranked = answered
+      .map(x => ({ q: x.q, v: x.v, score: (MGMT_CONCERN_SEVERITY[x.q.key] || {})[x.v] || 0 }))
+      .sort((a, b) => b.score - a.score);
+    const concerns = ranked.filter(x => x.score >= 1).slice(0, 2);
+
+    if (concerns.length >= 2) {
+      const [a, b] = concerns;
+      const adviceA = MGMT_ADVICE[a.q.key][a.v], adviceB = MGMT_ADVICE[b.q.key][b.v];
+      return `経営の状況として「${a.q.label}」（${mgmtLabel(a.q.key, a.v)}）と「${b.q.label}」（${mgmtLabel(b.q.key, b.v)}）の2点が特に気になっています。それぞれの次の一手（『${adviceA.action}』／『${adviceB.action}』）を踏まえ、当社としてどちらを先に着手すべきか、優先順位と具体的な進め方を教えてください。`;
     }
+    if (concerns.length === 1) {
+      const top = concerns[0];
+      const advice = MGMT_ADVICE[top.q.key][top.v];
+      return `特に「${top.q.label}」について、現状は${mgmtLabel(top.q.key, top.v)}という状況です。提言でいただいた『${advice.action}』を、当社の実情に当てはめて、具体的な実行手順（誰が・いつまでに・何をするか）まで落とし込んでください。`;
+    }
+    /* 5問すべてが良好な回答 → 課題解決ではなく、次の成長に向けた相談に切り替える */
+    const dir = answered.find(x => x.q.key === 'direction') || answered[0];
+    const advice = MGMT_ADVICE[dir.q.key][dir.v];
+    return `経営の状況は総じて安定しているとお答えいただきました。「${dir.q.label}」（${mgmtLabel(dir.q.key, dir.v)}）という方針を踏まえ、提言でいただいた『${advice.action}』を実現するために、次に何から着手すべきか、具体的な進め方を教えてください。`;
   }
+
   const prio = C.sel.filter(t => t.priority);
   if (prio.length) {
     const names = prio.slice(0, 3).map(t => t.name).join('、');
